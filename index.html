@@ -1,0 +1,491 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Learning JavaScript</title>
+	<link href="style.css" rel="stylesheet" />
+</head>
+
+<body onKeyPress="processKey(event);">
+
+	<div id="pacman"></div>
+	<div id="redghost"></div>
+
+	<table id="board" cellpadding="0" cellspacing="0" border="0"></table>
+	<table>
+		<thead>
+			<tr>
+				<td id="score">Score: 0</td>
+			</tr>
+		</thead>
+	</table>
+	<script type="text/javascript">
+
+		//................................. Initialization
+
+		// create grid
+		function createGrid(){
+			var dotcounter = 0;
+
+			for(r=0;r<=board.rows;r++){
+				var c = 0,
+						row = document.createElement('tr'),
+						td = document.createElement('td'),
+						div = document.createElement('div'),
+						columns = [],
+						blockstemp = [],
+						gridrow = [];
+
+						board.grid.push(columns.map(function(I,i){return i}));
+
+				do {
+					var cell = td.cloneNode(),
+							coords = [c,r],
+							filled = false;
+
+					board.grid[r].push(convert(coords));
+
+					for(i=0;i<window.blocks.length;i++){
+						if(window.blocks[i][0] === coords[0] && window.blocks[i][1] === coords[1]){
+							cell.className = 'block';
+							filled = true;
+						}
+					}
+
+					if(!filled){
+						coords.push(dotcounter);
+						window.dots.push(coords);
+
+						var dot = div.cloneNode();
+								dot.className = 'dot';
+								dot.id = 'dot' + dotcounter;
+						cell.appendChild(dot);
+
+						dotcounter++;
+					}
+
+					row.appendChild(cell);
+					c++;
+				}
+				while(c <= board.columns);
+				
+				
+				board.dom.appendChild(row);
+			}
+
+			console.log(board.grid);
+			console.log('^^ Grid');
+			console.log(dots);
+			console.log('^^ Dots');
+		}
+		// record board rectangle
+		function setContainer(){
+			//
+			var container = board.dom.getBoundingClientRect();
+					board.container.u = container.top;
+					board.container.r = container.right;
+					board.container.d = container.bottom;
+					board.container.l = container.left;
+		}
+		// key binding
+		function processKey(e){
+			var control = false;
+
+			switch(String.fromCharCode(e.keyCode)){
+				case 'd':
+					control = 'r';
+				break;
+				case 'a':
+					control = 'l';
+				break;
+				case 'w':
+					control = 'u';
+				break;
+				case 's':
+					control = 'd';
+				break;
+			}
+
+			if(control) pacman.direction = control;
+		}
+		// start sprites (set aside for organization)
+		function startSprites(){
+			window.sprites = {
+				pacman: 1,
+				ghosts: 1
+			}
+			setInterval(sprite,100);
+		}
+		// initialize css for positions
+		function setStartPos(character){
+			window[character].dom.style.left = (window[character].coords[0] * 22) + 'px';
+			window[character].dom.style.top = (window[character].coords[1] * 22) + 'px';
+		}
+		// set variables (" ")
+		function globalVars(){
+			window.board = {
+				dom: document.getElementById('board'),
+				grid: [],
+				rows: 14,
+				columns: 8,
+				container: {u:0,r:0,d:0,l:0}
+			}
+			
+			window.score = 0;
+			window.score_dom = document.getElementById('score');
+
+			window.pacman = {
+				dom: document.getElementById('pacman'),
+				position: convert([0,0]),
+				coords: [0,0],
+				direction: 'r',
+				moving: 'r',
+				stopped: false
+			}
+			window.redghost = {
+				dom: document.getElementById('redghost'),
+				position: convert([3,7]),
+				coords: [3,7],
+				direction: 'r',
+				moving: 'r',
+				stopped: false
+			}
+			window.axes = {
+				r: 0,
+				l: 0,
+				u: 1,
+				d: 1
+			}
+			window.speed = 880;
+			window.dots = [];
+			window.blocks = [
+				[1,1],
+				[1,2],
+				[2,1],
+				[2,2],
+				
+				[6,1],
+				[6,2],
+				[7,1],
+				[7,2],
+
+				[1,13],
+				[1,12],
+				[2,13],
+				[2,12],
+
+				[6,13],
+				[6,12],
+				[7,13],
+				[7,12],
+				
+				[4,1],
+				[4,2],
+				[4,3],
+				[4,11],
+				[4,12],
+				[4,13],
+				
+				[2,4],
+				[3,4],
+				[4,4],
+				[5,4],
+				[6,4],
+
+				[2,10],
+				[3,10],
+				[4,10],
+				[5,10],
+				[6,10],
+
+				
+				[0,4],
+				[0,5],
+				[0,6],
+				[8,4],
+				[8,5],
+				[8,6],
+
+				[0,8],
+				[0,9],
+				[0,10],
+				[8,8],
+				[8,9],
+				[8,10],
+
+				[3,6],
+				[2,6],
+				[2,7],
+				[2,8],
+				[3,8],
+				[4,8],
+				[5,8],
+				[6,8],
+				[6,7],
+				[6,6],
+				[5,6],
+			];
+		}
+		// initialization
+		function init() {
+			globalVars();
+			createGrid();
+			setContainer();
+			startSprites();
+			setStartPos('pacman');
+			setStartPos('redghost');
+
+			setInterval(logicInterval,(speed / 22));
+			setInterval(aiInterval,(speed / 22));
+		}
+
+		//................................. Intervals
+
+		// sprites
+		function sprite(){
+			pacman.dom.className = pacman.moving + sprites.pacman;
+			redghost.dom.className = redghost.moving + sprites.ghosts;
+			switch(sprites.pacman){
+				case 1: sprites.pacman++; break;
+				case 2: sprites.pacman++; break;
+				case 3: sprites.pacman++; break;
+				case 4: sprites.pacman=1; break;
+			}
+			switch(sprites.ghosts){
+				case 1: sprites.ghosts++; break;
+				case 2: sprites.ghosts++; break;
+				case 3: sprites.ghosts++; break;
+				case 4: sprites.ghosts=1; break;
+			}
+		}
+		// raw movement handling
+		function move(character){
+
+			var property = axes[window[character].moving] === 0 ? 'left' : 'top',
+					current = window[character].dom.style[property] !== '' ? window[character].dom.style[property] : 0;
+				if(window[character].moving == 'u' || window[character].moving == 'l'){
+					var val = -2;
+				}
+				else{
+					var val = 2;
+				}
+				window[character].dom.style[property] = (parseInt(current) + parseInt(val)) + 'px';
+
+			// update window[character].position
+			var pos = window[character].dom.getBoundingClientRect();
+					window[character].position.u = pos.top;
+					window[character].position.r = pos.right;
+					window[character].position.d = pos.bottom;
+					window[character].position.l = pos.left;
+		}
+		// start movement
+		function start(character){
+			window[character.toString() + 'Interval'] = setInterval(character.toString() + 'Interval',(speed / 22));
+			window[character.toString()].stopped = false;
+		}
+		// stop movement
+		function stop(character){
+			clearInterval(character.toString() + 'Interval');
+			window[character.toString()].stopped = true;
+		}	
+		// logic
+		function logicInterval(){
+			if(checkpoint('pacman')){
+				isPath('pacman');
+				collectItem();
+				collisionCheck();
+			}
+
+			if(!pacman.stopped){
+				move('pacman');
+			}
+		}
+		// AI logic
+		function aiInterval(character){
+			character = 'redghost';
+			if(checkpoint(character)){
+				isPath(character);
+				redirect(character);
+			}
+
+			if(window[character].stopped){
+				
+			}
+			else {
+				move(character);
+			}
+		}
+
+		//.................................. Gameplay Logic
+
+			// every 22px
+			function checkpoint(character){
+				switch(axes[window[character].moving]){
+					case 0:
+						var pos1 = window[character].position.r;
+						var pos2 = window[character].position.l;
+					break;
+					case 1:
+						var pos1 = window[character].position.u;
+						var pos2 = window[character].position.d;
+					break;
+				}
+
+		    if(pos1 % 22 === 0 && pos2 % 22 === 0){
+					window[character].moving = window[character].direction;
+					window[character].coords = [window[character].position.l / 22, window[character].position.u / 22];
+					return true;
+		    }
+		    else{
+		    	return false;
+		    }
+			}
+			// not running into block/off board
+			function isPath(character){
+
+				var coords = getDestination(character);
+				var isspace = false;
+
+				try {
+					for(var space in board.grid[coords[1]][coords[0]]){
+						isspace = true;
+					}
+				}catch(err){}
+
+				var ispath = true;
+				for(i=0;i<blocks.length;i++){
+					if(blocks[i][0] === coords[0] && blocks[i][1] === coords[1]) ispath = false;
+				}
+				
+		    if(isspace && ispath){
+					start(character);
+		    }
+		    else{
+		    	stop(character);
+		    }
+			}
+			// collect dots and fruits
+			function collectItem(){
+				for(i=0;i<dots.length;i++){
+					if(dots[i][0] === pacman.coords[0] && dots[i][1] === pacman.coords[1]){
+						try{
+							document.getElementById('dot' + dots[i][2]).remove();
+						}catch(err){}
+
+						dots.splice(i, 1);
+
+						incrementScore(1);
+
+						if(dots.length === 0){
+							console.log('You win!');
+						}
+					}
+				}
+			}
+			// enemy collision check
+			function collisionCheck(){
+				var dest_pacman = getDestination('pacman');
+
+				if(dest_pacman[0] === redghost.coords[0] && dest_pacman[1] === redghost.coords[1]){
+					setTimeout(function(){
+						console.log('Dead...');
+						stop('pacman');
+					},(speed/11));
+				}
+			}
+			// score keeping
+			function incrementScore(i){
+				window.score = window.score + i;
+				console.log(window.score);
+				window.score_dom.textContent = 'Score: ' + window.score;
+			}
+		//
+
+		//.................................. AI Logic
+
+			// redirect function
+			function redirect(character){
+				var target = setTarget(character);
+				console.log(target);
+				window[character].direction = target;
+			}
+
+
+		//................................... Tools
+
+		// request required direction
+		function setTarget(character){
+
+			var coords = window[character].coords,
+					x = Math.abs(pacman.coords[0] - coords[0]),
+					y = Math.abs(pacman.coords[1] - coords[1]),
+					axis = x > y ? 0 : 1;
+
+					if(x === 0) axis = x;
+					if(y === 0) axis = y;
+
+					switch(axis){
+						case 0:
+							return pacman.coords[0] > coords[0] ? 'r' : 'l';
+						break;
+						case 1:
+							return pacman.coords[1] > coords[1] ? 'd' : 'u';
+						break;
+					}
+		}
+		// get space a character is moving to
+		function getDestination(character,count){
+			count = count === undefined ? 1 : count;
+
+			if(window[character].moving == 'u' || window[character].moving == 'l'){
+				var addition = -(count);
+			}
+			else{
+				var addition = count;
+			}
+
+			switch(axes[window[character].moving]){
+				case 0:
+					coords = [(window[character].coords[0] + addition),window[character].coords[1]];
+				break;
+				case 1:
+					coords = [window[character].coords[0],(window[character].coords[1] + addition)];
+				break;
+			}
+			return coords;
+		}
+		// convert x,y to u,d,l,r
+		function convert(coords){
+			return {
+				u: (coords[0] * 22),
+				d: (coords[0] * 22) + 22,
+				l: (coords[1] * 22),
+				r: (coords[1] * 22) + 22
+			}
+		}
+		// boolean of whether he wants to turn a corner or go backwards
+		function changedAxis(){
+			//
+			return (axes[pacman.direction] !== axes[pacman.moving]);
+		}
+		// boolean of whether he wants to turn
+		function changedDirection(){
+			//
+			return (pacman.moving !== pacman.direction);
+		}
+		// opposite of each direction
+		function opposite(direction){
+			switch(direction){
+				case 'l': return 'r'; break;
+				case 'r': return 'l'; break;
+				case 'u': return 'd'; break;
+				case 'd': return 'u'; break;
+			}
+		}
+
+
+		init();
+	</script>
+
+</body>
+</html>
